@@ -7,8 +7,16 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN npm run build
 
+# Receber variáveis de ambiente como build args
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+
+# Exportar como variáveis de ambiente para o build
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
+
+RUN npm run build
 
 # Etapa 2: nginx
 FROM nginx:alpine
