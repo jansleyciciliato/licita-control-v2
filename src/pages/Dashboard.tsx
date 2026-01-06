@@ -19,7 +19,6 @@ export function Dashboard({ licitacoes }: DashboardProps) {
   const filteredLicitacoes = useMemo(() => {
     let result = [...licitacoes];
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
       result = result.filter(l => 
@@ -28,12 +27,10 @@ export function Dashboard({ licitacoes }: DashboardProps) {
       );
     }
 
-    // Filter by status
     if (statusFilter !== 'TODOS') {
       result = result.filter(l => l.status === statusFilter);
     }
 
-    // Sort by date
     result.sort((a, b) => {
       const dateA = new Date(a.data_hora_abertura).getTime();
       const dateB = new Date(b.data_hora_abertura).getTime();
@@ -47,9 +44,9 @@ export function Dashboard({ licitacoes }: DashboardProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Licitações</h1>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            {licitacoes.length} licitações cadastradas
+            Gerencie e acompanhe suas licitações
           </p>
         </div>
         <Button onClick={() => navigate('/nova')}>
@@ -68,22 +65,18 @@ export function Dashboard({ licitacoes }: DashboardProps) {
       />
 
       {filteredLicitacoes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-1">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-1">
             Nenhuma licitação encontrada
           </h3>
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground">
             {search || statusFilter !== 'TODOS' 
-              ? 'Tente ajustar os filtros de busca'
+              ? 'Tente ajustar os filtros ou a busca'
               : 'Comece adicionando uma nova licitação'}
           </p>
-          {!search && statusFilter === 'TODOS' && (
-            <Button onClick={() => navigate('/nova')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Licitação
-            </Button>
-          )}
         </div>
       ) : (
         <div className="grid gap-4">
