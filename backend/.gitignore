@@ -1,0 +1,16 @@
+# Ambiente virtual
+venv/
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Uploads temporários
+uploads/
+
+# VSCode
+.vscode/
