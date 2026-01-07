@@ -27,6 +27,31 @@ export function LicitacaoForm({
 }: LicitacaoFormProps) {
   const documentosHabilitacao = licitacao.documentos_habilitacao as Record<string, string[]> | null;
 
+  // Helper para formatar valor monetário de forma segura
+  const formatarMoeda = (valor: number | null | undefined): string => {
+    if (valor === null || valor === undefined || isNaN(valor)) {
+      return 'R$ 0,00';
+    }
+    return valor.toLocaleString('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL' 
+    });
+  };
+
+  // Helper para extrair hora de forma segura
+  const extrairHora = (dataHora: string | null | undefined): string => {
+    if (!dataHora) return '';
+    try {
+      const partes = dataHora.split('T');
+      if (partes.length > 1) {
+        return partes[1].substring(0, 5);
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Status Card */}
@@ -90,7 +115,7 @@ export function LicitacaoForm({
                 <Label htmlFor="numero_edital">Número do Edital</Label>
                 <Input
                   id="numero_edital"
-                  value={licitacao.numero_edital}
+                  value={licitacao.numero_edital || ''}
                   onChange={(e) => onChange({ numero_edital: e.target.value })}
                 />
               </div>
@@ -98,7 +123,7 @@ export function LicitacaoForm({
                 <Label htmlFor="numero_processo">Número do Processo</Label>
                 <Input
                   id="numero_processo"
-                  value={licitacao.numero_processo}
+                  value={licitacao.numero_processo || ''}
                   onChange={(e) => onChange({ numero_processo: e.target.value })}
                 />
               </div>
@@ -106,7 +131,7 @@ export function LicitacaoForm({
                 <Label htmlFor="orgao">Órgão</Label>
                 <Input
                   id="orgao"
-                  value={licitacao.orgao}
+                  value={licitacao.orgao || ''}
                   onChange={(e) => onChange({ orgao: e.target.value })}
                 />
               </div>
@@ -114,7 +139,7 @@ export function LicitacaoForm({
                 <Label htmlFor="modalidade">Modalidade</Label>
                 <Input
                   id="modalidade"
-                  value={licitacao.modalidade}
+                  value={licitacao.modalidade || ''}
                   onChange={(e) => onChange({ modalidade: e.target.value })}
                 />
               </div>
@@ -122,7 +147,7 @@ export function LicitacaoForm({
                 <Label htmlFor="tipo_disputa">Tipo de Disputa</Label>
                 <Input
                   id="tipo_disputa"
-                  value={licitacao.tipo_disputa}
+                  value={licitacao.tipo_disputa || ''}
                   onChange={(e) => onChange({ tipo_disputa: e.target.value })}
                 />
               </div>
@@ -130,14 +155,14 @@ export function LicitacaoForm({
                 <Label htmlFor="tipo_lances">Tipo de Lances</Label>
                 <Input
                   id="tipo_lances"
-                  value={licitacao.tipo_lances}
+                  value={licitacao.tipo_lances || ''}
                   onChange={(e) => onChange({ tipo_lances: e.target.value })}
                 />
               </div>
               <div className="flex items-center space-x-2 pt-6">
                 <Switch
                   id="registro_preco"
-                  checked={licitacao.registro_preco}
+                  checked={licitacao.registro_preco || false}
                   onCheckedChange={(checked) => onChange({ registro_preco: checked })}
                 />
                 <Label htmlFor="registro_preco">Registro de Preços</Label>
@@ -147,7 +172,7 @@ export function LicitacaoForm({
                 <Input
                   id="data_abertura"
                   type="date"
-                  value={licitacao.data_abertura}
+                  value={licitacao.data_abertura || ''}
                   onChange={(e) => onChange({ data_abertura: e.target.value })}
                 />
               </div>
@@ -156,10 +181,13 @@ export function LicitacaoForm({
                 <Input
                   id="hora_abertura"
                   type="time"
-                  value={licitacao.data_hora_abertura.split('T')[1]?.substring(0, 5) || ''}
-                  onChange={(e) => onChange({ 
-                    data_hora_abertura: `${licitacao.data_abertura}T${e.target.value}:00` 
-                  })}
+                  value={extrairHora(licitacao.data_hora_abertura)}
+                  onChange={(e) => {
+                    const data = licitacao.data_abertura || new Date().toISOString().split('T')[0];
+                    onChange({ 
+                      data_hora_abertura: `${data}T${e.target.value}:00` 
+                    });
+                  }}
                 />
               </div>
             </CardContent>
@@ -209,7 +237,7 @@ export function LicitacaoForm({
                 <Label htmlFor="objeto_resumido">Objeto Resumido</Label>
                 <Input
                   id="objeto_resumido"
-                  value={licitacao.objeto_resumido}
+                  value={licitacao.objeto_resumido || ''}
                   onChange={(e) => onChange({ objeto_resumido: e.target.value })}
                 />
               </div>
@@ -218,7 +246,7 @@ export function LicitacaoForm({
                 <Textarea
                   id="objeto"
                   rows={4}
-                  value={licitacao.objeto}
+                  value={licitacao.objeto || ''}
                   onChange={(e) => onChange({ objeto: e.target.value })}
                 />
               </div>
@@ -229,7 +257,7 @@ export function LicitacaoForm({
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">Itens da Licitação</h3>
-              {licitacao.itens && licitacao.itens.length > 0 ? (
+              {licitacao.itens && Array.isArray(licitacao.itens) && licitacao.itens.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -243,18 +271,19 @@ export function LicitacaoForm({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {licitacao.itens.map((item, index) => (
+                      {licitacao.itens.map((item: any, index: number) => (
                         <TableRow key={index}>
-                          <TableCell>{item.lote}</TableCell>
-                          <TableCell>{item.item}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{item.descricao}</TableCell>
-                          <TableCell>{item.unidade}</TableCell>
-                          <TableCell className="text-right">{item.quantidade}</TableCell>
+                          <TableCell>{item.lote || '-'}</TableCell>
+                          <TableCell>{item.item || '-'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {item.descricao || 'Sem descrição'}
+                          </TableCell>
+                          <TableCell>{item.unidade || '-'}</TableCell>
                           <TableCell className="text-right">
-                            {item.valor_estimado.toLocaleString('pt-BR', { 
-                              style: 'currency', 
-                              currency: 'BRL' 
-                            })}
+                            {item.quantidade || 0}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatarMoeda(item.valor_estimado)}
                           </TableCell>
                         </TableRow>
                       ))}
