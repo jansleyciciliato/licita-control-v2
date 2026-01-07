@@ -13,30 +13,31 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { 
-    licitacoes, 
-    addLicitacao, 
-    updateLicitacao, 
-    updateStatus, 
-    deleteLicitacao, 
-    getLicitacaoById 
+  const {
+    licitacoes,
+    createLicitacao,
+    updateLicitacao,
+    deleteLicitacao,
   } = useLicitacoes();
+
+  // Função auxiliar para manter compatibilidade se Dashboard precisar
+  const addLicitacao = async (licitacao: any) => {
+    await createLicitacao(licitacao);
+  };
+
+  // Função auxiliar para atualizar status
+  const updateStatus = async (id: string, status: string) => {
+    await updateLicitacao(id, { status });
+  };
 
   return (
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard licitacoes={licitacoes} />} />
         <Route path="/nova" element={<NovaLicitacao onAdd={addLicitacao} />} />
-        <Route 
-          path="/licitacao/:id" 
-          element={
-            <DetalheLicitacao 
-              getLicitacaoById={getLicitacaoById}
-              onUpdate={updateLicitacao}
-              onStatusChange={updateStatus}
-              onDelete={deleteLicitacao}
-            />
-          } 
+        <Route
+          path="/licitacao/:id"
+          element={<DetalheLicitacao />}
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -47,8 +48,6 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
