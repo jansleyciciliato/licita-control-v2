@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useLicitacoes } from '@/hooks/useLicitacoes';
+import { normalizarLicitacao } from '@/utils/safeValues';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Licitacao = Tables<'licitacoes'>;
@@ -43,7 +44,9 @@ export function DetalheLicitacao() {
         const data = await fetchLicitacaoById(id);
         
         if (data) {
-          setLicitacao(data);
+          // Normalizar dados para evitar erros com campos null
+          const licitacaoNormalizada = normalizarLicitacao(data);
+          setLicitacao(licitacaoNormalizada);
         } else {
           toast.error('Licitação não encontrada');
           navigate('/');
@@ -58,7 +61,8 @@ export function DetalheLicitacao() {
     }
 
     carregarLicitacao();
-  }, [id, fetchLicitacaoById, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // ✅ APENAS id como dependência
 
   if (loadingDetail || loading) {
     return (

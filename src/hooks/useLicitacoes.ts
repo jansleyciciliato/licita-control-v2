@@ -1,5 +1,5 @@
 // src/hooks/useLicitacoes.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -24,7 +24,7 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
   const [error, setError] = useState<string | null>(null);
 
   // Buscar todas as licitações
-  const fetchLicitacoes = async () => {
+  const fetchLicitacoes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,10 +44,10 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Buscar licitação por ID
-  const fetchLicitacaoById = async (id: string): Promise<Licitacao | null> => {
+  const fetchLicitacaoById = useCallback(async (id: string): Promise<Licitacao | null> => {
     try {
       setLoading(true);
       setError(null);
@@ -69,10 +69,10 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Criar nova licitação
-  const createLicitacao = async (
+  const createLicitacao = useCallback(async (
     licitacao: Omit<Licitacao, 'id' | 'data_cadastro'>
   ): Promise<Licitacao | null> => {
     try {
@@ -101,10 +101,10 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Atualizar licitação
-  const updateLicitacao = async (
+  const updateLicitacao = useCallback(async (
     id: string,
     updates: Partial<Licitacao>
   ): Promise<Licitacao | null> => {
@@ -137,10 +137,10 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Deletar licitação
-  const deleteLicitacao = async (id: string): Promise<boolean> => {
+  const deleteLicitacao = useCallback(async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
@@ -164,7 +164,7 @@ export const useLicitacoes = (): UseLicitacoesReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Filtrar por status
   const filterByStatus = (status: string): Licitacao[] => {
