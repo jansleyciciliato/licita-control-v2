@@ -17,11 +17,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Configurar CORS para permitir requisições do frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://n8n-licita-control-v2.qwzkj4.easypanel.host/",
-        "http://127.0.0.1:5173",
+        "http://localhost:5173",  # Vite dev
+        "http://localhost:3000",  # React dev
+        "http://127.0.0.1:5173",  # Servidor backend
+        "https://n8n-licita-control-v2.qwzkj4.easypanel.host",  # Produção
+        "*"  # Permitir todos (remova em produção se quiser mais segurança)
     ],
     allow_credentials=True,
     allow_methods=["*"],
