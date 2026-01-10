@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from typing import List
 import os
@@ -16,7 +17,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS não é mais necessário pois está no mesmo domínio via nginx proxy
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://n8n-licita-control-v2.qwzkj4.easypanel.host/",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

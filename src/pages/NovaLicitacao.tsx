@@ -24,7 +24,7 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
   const [currentStep, setCurrentStep] = useState('');
 
   // URL do backend - como está no mesmo domínio, usa path relativo
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
 
   const handleProcess = async () => {
     if (files.length === 0) {
@@ -105,9 +105,6 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
 
       // Aguardar 500ms para mostrar o progresso completo
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Redirecionar para a página de detalhes
-      navigate(`/licitacao/${licitacaoCompleta.id}`);
 
       // Redirecionar para a página de detalhes
       navigate(`/licitacao/${licitacaoCompleta.id}`);
