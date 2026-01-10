@@ -3,20 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, AlertCircle, Loader2, Send } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, AlertCircle, Loader2, Send, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Licitacao } from '@/types/licitacao';
+import { useLicitacoes } from '@/hooks/useLicitacoes';
 import { toast } from 'sonner';
 
 interface NovaLicitacaoProps {
-  onAdd: (licitacao: Omit<Licitacao, 'id' | 'data_cadastro' | 'status'>) => Licitacao;
+  onAdd?: (licitacao: any) => any; // Manter para compatibilidade
 }
 
 export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
   const navigate = useNavigate();
+  const { fetchLicitacaoById } = useLicitacoes();
+  
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
+
+  // URL do backend - como está no mesmo domínio, usa path relativo
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
   const handleProcess = async () => {
     if (files.length === 0) {
@@ -26,59 +34,96 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
 
     setIsProcessing(true);
     setError(null);
+    setProgress(0);
+    setCurrentStep('Preparando arquivos...');
 
     try {
-      // Preparar FormData com os arquivos
+      // Passo 1: Preparar FormData
+      setProgress(10);
       const formData = new FormData();
       files.forEach((file) => {
         formData.append('files', file);
       });
 
-      // Enviar para o backend Python
-      const response = await fetch('/api/upload-pdfs', {
+      setCurrentStep('Enviando documentos para o servidor...');
+      setProgress(20);
+
+      // Passo 2: Enviar para o backend Python
+      console.log('📤 Enviando para:', `${BACKEND_URL}/upload-pdfs`);
+      
+      const response = await fetch(`${BACKEND_URL}/upload-pdfs`, {
         method: 'POST',
         body: formData,
+        // Não definir Content-Type - o browser faz isso automaticamente com o boundary correto
       });
 
+      setProgress(40);
+      setCurrentStep('Processando documentos com IA...');
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Erro ao processar documentos');
+        const errorData = await response.json().catch(() => ({ 
+          detail: `Erro HTTP ${response.status}: ${response.statusText}` 
+        }));
+        throw new Error(errorData.detail || errorData.message || 'Erro ao processar documentos');
       }
 
       const data = await response.json();
+      console.log('📥 Resposta do backend:', data);
 
-      if (!data.success) {
-        throw new Error('Erro ao processar documentos');
+      setProgress(60);
+      setCurrentStep('Validando dados extraídos...');
+
+      if (!data.success && !data.extraido && !data.licitacao) {
+        throw new Error('Nenhum dado foi extraído dos documentos');
       }
 
-      const extractedData = data.extraido ?? data.licitacao;
+      // Extrair dados da resposta
+      // Backend retorna: { success: true, licitacao: { id, numero_edital, status } }
+      const licitacaoBackend = data.licitacao;
 
-      // Preparar dados extraídos para criação
-      const licitacaoData: Omit<Licitacao, 'id' | 'data_cadastro' | 'status'> = {
-        numero_edital: extractedData.numero_edital || null,
-        numero_processo: extractedData.numero_processo || null,
-        orgao: extractedData.orgao || null,
-        modalidade: extractedData.modalidade || null,
-        tipo_disputa: extractedData.tipo_disputa || null,
-        registro_preco: extractedData.registro_preco || false,
-        tipo_lances: extractedData.tipo_lances || null,
-        data_abertura: extractedData.data_abertura || null,
-        data_hora_abertura: extractedData.data_hora_abertura || null,
-        objeto: extractedData.objeto || null,
-        objeto_resumido: extractedData.objeto_resumido || null,
-        documentos_habilitacao: extractedData.documentos_habilitacao || {},
-        itens: extractedData.itens || [],
-      };
+      if (!licitacaoBackend || !licitacaoBackend.id) {
+        throw new Error('Backend não retornou os dados da licitação');
+      }
 
-      // Criar licitação com dados extraídos
-      const newLicitacao = onAdd(licitacaoData);
-      
-      toast.success('Licitação cadastrada com sucesso!');
-      navigate(`/licitacao/${newLicitacao.id}`);
+      setProgress(80);
+      setCurrentStep('Licitação salva! Carregando dados completos...');
+
+      // Buscar dados completos do Supabase usando o ID retornado
+      const licitacaoCompleta = await fetchLicitacaoById(licitacaoBackend.id);
+
+      if (!licitacaoCompleta) {
+        throw new Error('Erro ao buscar licitação salva');
+      }
+
+      setProgress(100);
+      setCurrentStep('Concluído!');
+
+      // Feedback de sucesso
+      toast.success('Licitação cadastrada com sucesso!', {
+        description: `Edital: ${licitacaoCompleta.numero_edital || 'Sem número'}`,
+      });
+
+      // Aguardar 500ms para mostrar o progresso completo
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Redirecionar para a página de detalhes
+      navigate(`/licitacao/${licitacaoCompleta.id}`);
+
+      // Redirecionar para a página de detalhes
+      navigate(`/licitacao/${licitacaoCompleta.id}`);
+
     } catch (err) {
+      console.error('❌ Erro ao processar:', err);
+      
       const message = err instanceof Error ? err.message : 'Erro desconhecido ao processar';
       setError(message);
-      toast.error(message);
+      
+      toast.error('Erro ao processar documentos', {
+        description: message,
+      });
+
+      setProgress(0);
+      setCurrentStep('');
     } finally {
       setIsProcessing(false);
     }
@@ -86,8 +131,14 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')} disabled={isProcessing}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/')} 
+          disabled={isProcessing}
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
@@ -98,6 +149,7 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
         </div>
       </div>
 
+      {/* Alert de Instruções */}
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
@@ -106,6 +158,7 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
         </AlertDescription>
       </Alert>
 
+      {/* Card Principal */}
       <Card>
         <CardHeader>
           <CardTitle>Upload de Documentos</CardTitle>
@@ -114,19 +167,62 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Componente de Upload */}
           <FileUpload
             files={files}
             onFilesChange={setFiles}
             disabled={isProcessing}
           />
 
-          {error && (
+          {/* Barra de Progresso */}
+          {isProcessing && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{currentStep}</span>
+                <span className="font-medium">{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+          )}
+
+          {/* Mensagem durante processamento */}
+          {isProcessing && (
+            <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Processando documentos...
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Nossa IA está extraindo informações dos PDFs. Isso pode levar alguns segundos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mensagem de Erro */}
+          {error && !isProcessing && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                <strong>Erro:</strong> {error}
+              </AlertDescription>
             </Alert>
           )}
 
+          {/* Mensagem de Sucesso */}
+          {progress === 100 && !error && (
+            <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                Documentos processados com sucesso! Redirecionando...
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Botões de Ação */}
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
@@ -153,19 +249,23 @@ export function NovaLicitacao({ onAdd }: NovaLicitacaoProps) {
               )}
             </Button>
           </div>
-
-          {isProcessing && (
-            <div className="bg-accent/50 rounded-lg p-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Extraindo informações dos documentos via IA...
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Isso pode levar alguns segundos
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {/* Card de Dicas */}
+      {!isProcessing && files.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="pt-6">
+            <h3 className="font-semibold mb-3">💡 Dicas para melhor resultado:</h3>
+            <ul className="text-sm text-muted-foreground space-y-2">
+              <li>• Faça upload de PDFs com boa qualidade</li>
+              <li>• Inclua o edital completo e anexos relevantes</li>
+              <li>• Arquivos digitais (não escaneados) funcionam melhor</li>
+              <li>• Você pode fazer upload de múltiplos arquivos</li>
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
