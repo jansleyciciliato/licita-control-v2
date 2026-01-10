@@ -81,7 +81,7 @@ COPY --from=frontend-build /app/dist /usr/share/nginx/html
 
 # Configurar Nginx
 RUN rm /etc/nginx/sites-enabled/default
-COPY nginx-unified.conf /etc/nginx/sites-available/default
+COPY nginx.conf /etc/nginx/sites-available/default
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
 # Configurar Supervisor para rodar Nginx e Backend juntos
